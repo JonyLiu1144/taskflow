@@ -900,6 +900,7 @@ export default function TaskList({
                     isSelected={false}
                     isEditing={false}
                     timerLinked={false}
+                    isDragging={false}
                     onClick={() => {}}
                     onToggle={() => handleToggle(t.id)}
                     onDelete={() => onDeleteTodo(t.id)}

@@ -65,7 +65,7 @@ export default function CelebrationToast({ todo, completedToday, onDismiss }: Pr
   const rafRef     = useRef<number>(0);
   const [phase, setPhase] = useState<'in' | 'out'>('in');
   const [quote]    = useState(() => QUOTES[Math.floor(Math.random() * QUOTES.length)]);
-  const timerRef   = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef   = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const dismiss = useCallback(() => {
     clearTimeout(timerRef.current);
