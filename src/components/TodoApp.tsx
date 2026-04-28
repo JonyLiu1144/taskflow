@@ -39,6 +39,7 @@ const DEFAULT_TODOS: Todo[] = [
     startedAt: null,
     startTime: null,
     endTime: null,
+    dailyTime: {},
   },
   {
     id: 'demo2',
@@ -57,6 +58,7 @@ const DEFAULT_TODOS: Todo[] = [
     startedAt: null,
     startTime: null,
     endTime: null,
+    dailyTime: {},
   },
   {
     id: 'demo3',
@@ -75,6 +77,7 @@ const DEFAULT_TODOS: Todo[] = [
     startedAt: null,
     startTime: null,
     endTime: null,
+    dailyTime: {},
   },
   {
     id: 'demo4',
@@ -93,6 +96,7 @@ const DEFAULT_TODOS: Todo[] = [
     startedAt: null,
     startTime: null,
     endTime: null,
+    dailyTime: {},
   },
 ];
 
@@ -133,13 +137,15 @@ export default function TodoApp() {
   // Task time tracking ticker
   useEffect(() => {
     const id = setInterval(() => {
+      const todayKey = new Date().toISOString().split('T')[0];
       setTodos(prev => {
         const hasTracking = prev.some(t => t.isTracking);
         if (!hasTracking) return prev;
         return prev.map(t => {
           if (!t.isTracking || !t.trackingStart) return t;
           const elapsed = Math.floor((Date.now() - t.trackingStart) / 1000);
-          return { ...t, timeSpent: t.timeSpent + elapsed, trackingStart: Date.now() };
+          const dailyTime = { ...(t.dailyTime ?? {}), [todayKey]: (t.dailyTime?.[todayKey] ?? 0) + elapsed };
+          return { ...t, timeSpent: t.timeSpent + elapsed, trackingStart: Date.now(), dailyTime };
         });
       });
     }, 1000);
@@ -172,6 +178,7 @@ export default function TodoApp() {
       startedAt: null,
       startTime,
       endTime,
+      dailyTime: {},
     };
     setTodos(p => [todo, ...p]);
   }, []);

@@ -23,6 +23,7 @@ export interface Todo {
   startedAt: string | null;
   startTime: string | null; // "HH:MM"
   endTime: string | null;   // "HH:MM"
+  dailyTime: Record<string, number>; // "YYYY-MM-DD" → seconds
 }
 
 export interface TodoList {

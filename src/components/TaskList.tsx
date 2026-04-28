@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Todo, TodoList, ViewFilter, Priority } from '@/types/todo';
 import CelebrationToast from './CelebrationToast';
+import TimeStats from './TimeStats';
 
 /* ── helpers ── */
 function genId() { return Math.random().toString(36).slice(2, 11); }
@@ -828,6 +829,8 @@ export default function TaskList({
 
       {/* Task list */}
       <div className="flex-1 overflow-y-auto py-4">
+        <TimeStats todos={todos} lists={lists} />
+
         {selectedView !== 'completed' && (
           <AddBar lists={lists} defaultListId={defaultListId} onAdd={onAddTodo} />
         )}
