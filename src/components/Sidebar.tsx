@@ -17,11 +17,12 @@ interface Props {
   onDeleteList: (id: string) => void;
   showTimer: boolean;
   onToggleTimer: () => void;
+  onSignOut: () => void;
 }
 
 export default function Sidebar({
   lists, todos, selectedView, onSelectView,
-  onAddList, onDeleteList, showTimer, onToggleTimer,
+  onAddList, onDeleteList, showTimer, onToggleTimer, onSignOut,
 }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName]       = useState('');
@@ -182,6 +183,13 @@ export default function Sidebar({
           <span className="text-[15px]">🍅</span>
           <span>番茄钟</span>
           {showTimer && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse-ring" />}
+        </button>
+        <button
+          onClick={onSignOut}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:bg-white/8 hover:text-slate-300 transition-all duration-150 mt-1"
+        >
+          <span className="text-[15px]">🚪</span>
+          <span>退出登录</span>
         </button>
       </div>
     </aside>

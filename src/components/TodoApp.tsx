@@ -15,124 +15,36 @@ const DEFAULT_LISTS: TodoList[] = [
   { id: 'shopping', name: '购物',  color: '#10b981' },
 ];
 
-const today = new Date().toISOString().split('T')[0];
-
-const DEFAULT_TODOS: Todo[] = [
-  {
-    id: 'demo1',
-    title: '完成项目季度报告',
-    description: '整理Q4数据，生成可视化图表并编写摘要',
-    completed: false,
-    priority: 1,
-    dueDate: today,
-    listId: 'work',
-    tags: [],
-    subtasks: [
-      { id: 'ds1', title: '收集销售数据', completed: true },
-      { id: 'ds2', title: '制作数据图表', completed: false },
-      { id: 'ds3', title: '编写执行摘要', completed: false },
-    ],
-    createdAt: new Date().toISOString(),
-    timeSpent: 2700,
-    isTracking: false,
-    trackingStart: null,
-    startedAt: null,
-    startTime: null,
-    endTime: null,
-    dailyTime: {},
-  },
-  {
-    id: 'demo2',
-    title: '阅读《原则》第三章',
-    description: '每天30分钟阅读计划',
-    completed: false,
-    priority: 3,
-    dueDate: today,
-    listId: 'personal',
-    tags: [],
-    subtasks: [],
-    createdAt: new Date().toISOString(),
-    timeSpent: 0,
-    isTracking: false,
-    trackingStart: null,
-    startedAt: null,
-    startTime: null,
-    endTime: null,
-    dailyTime: {},
-  },
-  {
-    id: 'demo3',
-    title: '购买食材',
-    description: '牛肉、西兰花、鸡蛋、牛奶',
-    completed: false,
-    priority: 4,
-    dueDate: null,
-    listId: 'shopping',
-    tags: [],
-    subtasks: [],
-    createdAt: new Date().toISOString(),
-    timeSpent: 0,
-    isTracking: false,
-    trackingStart: null,
-    startedAt: null,
-    startTime: null,
-    endTime: null,
-    dailyTime: {},
-  },
-  {
-    id: 'demo4',
-    title: '回复客户邮件',
-    description: '',
-    completed: true,
-    priority: 2,
-    dueDate: today,
-    listId: 'work',
-    tags: [],
-    subtasks: [],
-    createdAt: new Date().toISOString(),
-    timeSpent: 600,
-    isTracking: false,
-    trackingStart: null,
-    startedAt: null,
-    startTime: null,
-    endTime: null,
-    dailyTime: {},
-  },
-];
-
 export default function TodoApp() {
-  const [todos,         setTodos        ] = useState<Todo[]>([]);
-  const [lists,         setLists        ] = useState<TodoList[]>([]);
-  const [selectedView,  setSelectedView ] = useState<ViewFilter>('inbox');
+  const [todos,          setTodos         ] = useState<Todo[]>([]);
+  const [lists,          setLists         ] = useState<TodoList[]>([]);
+  const [selectedView,   setSelectedView  ] = useState<ViewFilter>('inbox');
   const [selectedTodoId, setSelectedTodoId] = useState<string | null>(null);
-  const [showTimer,     setShowTimer    ] = useState(true);
-  const [timerLinked,   setTimerLinked  ] = useState<string | null>(null);
-  const [hydrated,      setHydrated     ] = useState(false);
+  const [showTimer,      setShowTimer     ] = useState(true);
+  const [timerLinked,    setTimerLinked   ] = useState<string | null>(null);
+  const [hydrated,       setHydrated      ] = useState(false);
 
-  // Hydrate from localStorage
+  // Load from API
   useEffect(() => {
-    try {
-      const t = localStorage.getItem('taskflow_todos');
-      const l = localStorage.getItem('taskflow_lists');
-      setTodos(t ? JSON.parse(t) : DEFAULT_TODOS);
-      setLists(l ? JSON.parse(l) : DEFAULT_LISTS);
-    } catch {
-      setTodos(DEFAULT_TODOS);
+    Promise.all([
+      fetch('/api/todos').then(r => r.json()),
+      fetch('/api/lists').then(r => r.json()),
+    ]).then(([todosData, listsData]) => {
+      setTodos(Array.isArray(todosData) && todosData.length > 0 ? todosData : []);
+      setLists(Array.isArray(listsData) && listsData.length > 0 ? listsData : DEFAULT_LISTS);
+      if (Array.isArray(listsData) && listsData.length === 0) {
+        DEFAULT_LISTS.forEach(list => {
+          fetch('/api/lists', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(list),
+          });
+        });
+      }
+    }).catch(() => {
       setLists(DEFAULT_LISTS);
-    }
-    setHydrated(true);
+    }).finally(() => setHydrated(true));
   }, []);
-
-  // Persist todos
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem('taskflow_todos', JSON.stringify(todos));
-  }, [todos, hydrated]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem('taskflow_lists', JSON.stringify(lists));
-  }, [lists, hydrated]);
 
   // Task time tracking ticker
   useEffect(() => {
@@ -181,52 +93,92 @@ export default function TodoApp() {
       dailyTime: {},
     };
     setTodos(p => [todo, ...p]);
+    fetch('/api/todos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(todo),
+    });
   }, []);
 
   const toggleTodo = useCallback((id: string) => {
-    setTodos(p => p.map(t => t.id === id ? { ...t, completed: !t.completed, isTracking: false, trackingStart: null } : t));
+    setTodos(p => p.map(t => {
+      if (t.id !== id) return t;
+      const updated = { ...t, completed: !t.completed, isTracking: false, trackingStart: null };
+      fetch(`/api/todos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: updated.completed, isTracking: false, trackingStart: null }),
+      });
+      return updated;
+    }));
   }, []);
 
   const deleteTodo = useCallback((id: string) => {
     setTodos(p => p.filter(t => t.id !== id));
     if (selectedTodoId === id) setSelectedTodoId(null);
     if (timerLinked === id) setTimerLinked(null);
+    fetch(`/api/todos/${id}`, { method: 'DELETE' });
   }, [selectedTodoId, timerLinked]);
 
   const updateTodo = useCallback((id: string, updates: Partial<Todo>) => {
     setTodos(p => p.map(t => t.id === id ? { ...t, ...updates } : t));
+    fetch(`/api/todos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
   }, []);
 
   const toggleTracking = useCallback((id: string) => {
-    setTodos(prev => prev.map(t => {
-      if (t.id === id) {
+    setTodos(prev => {
+      const next = prev.map(t => {
+        if (t.id === id) {
+          if (t.isTracking) {
+            const extra = t.trackingStart ? Math.floor((Date.now() - t.trackingStart) / 1000) : 0;
+            const updated = { ...t, isTracking: false, trackingStart: null, timeSpent: t.timeSpent + extra };
+            fetch(`/api/todos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isTracking: false, trackingStart: null, timeSpent: updated.timeSpent }) });
+            return updated;
+          }
+          const updated = { ...t, isTracking: true, trackingStart: Date.now(), startedAt: t.startedAt ?? new Date().toISOString() };
+          fetch(`/api/todos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isTracking: true, trackingStart: updated.trackingStart, startedAt: updated.startedAt }) });
+          return updated;
+        }
         if (t.isTracking) {
           const extra = t.trackingStart ? Math.floor((Date.now() - t.trackingStart) / 1000) : 0;
-          return { ...t, isTracking: false, trackingStart: null, timeSpent: t.timeSpent + extra };
+          const updated = { ...t, isTracking: false, trackingStart: null, timeSpent: t.timeSpent + extra };
+          fetch(`/api/todos/${t.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isTracking: false, trackingStart: null, timeSpent: updated.timeSpent }) });
+          return updated;
         }
-        return { ...t, isTracking: true, trackingStart: Date.now(), startedAt: t.startedAt ?? new Date().toISOString() };
-      }
-      // stop any other tracking
-      if (t.isTracking) {
-        const extra = t.trackingStart ? Math.floor((Date.now() - t.trackingStart) / 1000) : 0;
-        return { ...t, isTracking: false, trackingStart: null, timeSpent: t.timeSpent + extra };
-      }
-      return t;
-    }));
+        return t;
+      });
+      return next;
+    });
   }, []);
 
   const addList = useCallback((name: string, color: string) => {
-    setLists(p => [...p, { id: genId(), name, color }]);
+    const list: TodoList = { id: genId(), name, color };
+    setLists(p => [...p, list]);
+    fetch('/api/lists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(list),
+    });
   }, []);
 
   const deleteList = useCallback((id: string) => {
     setLists(p => p.filter(l => l.id !== id));
     setTodos(p => p.filter(t => t.listId !== id));
     if (selectedView === id) setSelectedView('inbox');
+    fetch(`/api/lists/${id}`, { method: 'DELETE' });
   }, [selectedView]);
 
   const addTimerTime = useCallback((todoId: string, seconds: number) => {
-    setTodos(p => p.map(t => t.id === todoId ? { ...t, timeSpent: t.timeSpent + seconds } : t));
+    setTodos(p => p.map(t => {
+      if (t.id !== todoId) return t;
+      const updated = { ...t, timeSpent: t.timeSpent + seconds };
+      fetch(`/api/todos/${todoId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timeSpent: updated.timeSpent }) });
+      return updated;
+    }));
   }, []);
 
   const reorderTodos = useCallback((draggedId: string, targetId: string, position: 'before' | 'after') => {
@@ -241,6 +193,11 @@ export default function TodoApp() {
       return arr;
     });
   }, []);
+
+  async function signOut() {
+    await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'signout' }) });
+    window.location.href = '/login';
+  }
 
   if (!hydrated) {
     return (
@@ -264,6 +221,7 @@ export default function TodoApp() {
         onDeleteList={deleteList}
         showTimer={showTimer}
         onToggleTimer={() => setShowTimer(s => !s)}
+        onSignOut={signOut}
       />
 
       <main className="flex flex-1 min-w-0 overflow-hidden gap-px bg-slate-200/60">
@@ -299,7 +257,6 @@ export default function TodoApp() {
             onTimeAdd={addTimerTime}
           />
         )}
-
       </main>
     </div>
   );
