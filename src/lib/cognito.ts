@@ -14,11 +14,15 @@ export const cognitoClient = new CognitoIdentityProviderClient({
   },
 });
 
-const CLIENT_ID = process.env.COGNITO_CLIENT_ID!;
+function clientId() {
+  const id = process.env.COGNITO_CLIENT_ID;
+  if (!id) throw new Error('COGNITO_CLIENT_ID is not set');
+  return id;
+}
 
 export async function signUp(email: string, password: string) {
   await cognitoClient.send(new SignUpCommand({
-    ClientId: CLIENT_ID,
+    ClientId: clientId(),
     Username: email,
     Password: password,
     UserAttributes: [{ Name: 'email', Value: email }],
@@ -27,7 +31,7 @@ export async function signUp(email: string, password: string) {
 
 export async function confirmSignUp(email: string, code: string) {
   await cognitoClient.send(new ConfirmSignUpCommand({
-    ClientId: CLIENT_ID,
+    ClientId: clientId(),
     Username: email,
     ConfirmationCode: code,
   }));
@@ -36,7 +40,7 @@ export async function confirmSignUp(email: string, code: string) {
 export async function signIn(email: string, password: string) {
   const res = await cognitoClient.send(new InitiateAuthCommand({
     AuthFlow: 'USER_PASSWORD_AUTH',
-    ClientId: CLIENT_ID,
+    ClientId: clientId(),
     AuthParameters: { USERNAME: email, PASSWORD: password },
   }));
   return res.AuthenticationResult!;
