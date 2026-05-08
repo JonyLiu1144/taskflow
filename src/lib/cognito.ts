@@ -8,11 +8,13 @@ import {
 
 function getClient() {
   return new CognitoIdentityProviderClient({
-    region: process.env.APP_AWS_REGION ?? process.env.AWS_REGION ?? 'ap-northeast-1',
-    credentials: {
-      accessKeyId: (process.env.APP_AWS_ACCESS_KEY_ID ?? process.env.AWS_ACCESS_KEY_ID)!,
-      secretAccessKey: (process.env.APP_AWS_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY)!,
-    },
+    region: 'ap-northeast-1',
+    ...(process.env.NODE_ENV !== 'production' && {
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    }),
   });
 }
 

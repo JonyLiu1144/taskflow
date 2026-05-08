@@ -10,11 +10,14 @@ import { Todo, TodoList } from '@/types/todo';
 
 function getDb() {
   const client = new DynamoDBClient({
-    region: process.env.APP_AWS_REGION ?? process.env.AWS_REGION ?? 'ap-northeast-1',
-    credentials: {
-      accessKeyId: (process.env.APP_AWS_ACCESS_KEY_ID ?? process.env.AWS_ACCESS_KEY_ID)!,
-      secretAccessKey: (process.env.APP_AWS_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY)!,
-    },
+    region: 'ap-northeast-1',
+    // 线上使用 Amplify IAM 角色自动注入凭证，本地使用 .env.local 里的 AWS_* 变量
+    ...(process.env.NODE_ENV !== 'production' && {
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    }),
   });
   return DynamoDBDocumentClient.from(client);
 }
