@@ -3,16 +3,36 @@ import { getTodos, putTodo } from '@/lib/dynamo';
 import { Todo } from '@/types/todo';
 
 export async function GET() {
-  const userOrResponse = await requireUser();
-  if (userOrResponse instanceof Response) return userOrResponse;
-  const todos = await getTodos(userOrResponse.userId);
-  return Response.json(todos);
+  try {
+    const userOrResponse = await requireUser();
+    if (userOrResponse instanceof Response) {
+      console.error('[GET /api/todos] Unauthorized');
+      return userOrResponse;
+    }
+    console.log('[GET /api/todos] userId:', userOrResponse.userId);
+    const todos = await getTodos(userOrResponse.userId);
+    console.log('[GET /api/todos] found:', todos.length);
+    return Response.json(todos);
+  } catch (err) {
+    console.error('[GET /api/todos] error:', err);
+    return Response.json({ error: String(err) }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
-  const userOrResponse = await requireUser();
-  if (userOrResponse instanceof Response) return userOrResponse;
-  const todo: Todo = await request.json();
-  await putTodo(userOrResponse.userId, todo);
-  return Response.json({ ok: true });
+  try {
+    const userOrResponse = await requireUser();
+    if (userOrResponse instanceof Response) {
+      console.error('[POST /api/todos] Unauthorized');
+      return userOrResponse;
+    }
+    const todo: Todo = await request.json();
+    console.log('[POST /api/todos] userId:', userOrResponse.userId, 'todoId:', todo.id);
+    await putTodo(userOrResponse.userId, todo);
+    console.log('[POST /api/todos] saved ok');
+    return Response.json({ ok: true });
+  } catch (err) {
+    console.error('[POST /api/todos] error:', err);
+    return Response.json({ error: String(err) }, { status: 500 });
+  }
 }
