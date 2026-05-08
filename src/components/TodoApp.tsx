@@ -27,12 +27,14 @@ export default function TodoApp() {
   // Load from API
   useEffect(() => {
     Promise.all([
-      fetch('/api/todos').then(r => r.json()),
-      fetch('/api/lists').then(r => r.json()),
+      fetch('/api/todos').then(async r => { const d = await r.json(); if (!r.ok) throw new Error(JSON.stringify(d)); return d; }),
+      fetch('/api/lists').then(async r => { const d = await r.json(); if (!r.ok) throw new Error(JSON.stringify(d)); return d; }),
     ]).then(([todosData, listsData]) => {
-      setTodos(Array.isArray(todosData) && todosData.length > 0 ? todosData : []);
-      setLists(Array.isArray(listsData) && listsData.length > 0 ? listsData : DEFAULT_LISTS);
-      if (Array.isArray(listsData) && listsData.length === 0) {
+      setTodos(Array.isArray(todosData) ? todosData : []);
+      if (Array.isArray(listsData) && listsData.length > 0) {
+        setLists(listsData);
+      } else {
+        setLists(DEFAULT_LISTS);
         DEFAULT_LISTS.forEach(list => {
           fetch('/api/lists', {
             method: 'POST',
@@ -41,7 +43,8 @@ export default function TodoApp() {
           });
         });
       }
-    }).catch(() => {
+    }).catch((err) => {
+      console.error('[TaskFlow] Failed to load data:', err);
       setLists(DEFAULT_LISTS);
     }).finally(() => setHydrated(true));
   }, []);
