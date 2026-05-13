@@ -4,6 +4,7 @@ import {
   SignUpCommand,
   ConfirmSignUpCommand,
   GetUserCommand,
+  AuthFlowType,
 } from '@aws-sdk/client-cognito-identity-provider';
 
 function getClient() {
@@ -55,4 +56,13 @@ export async function getUser(accessToken: string) {
   const sub = res.UserAttributes?.find(a => a.Name === 'sub')?.Value;
   const email = res.UserAttributes?.find(a => a.Name === 'email')?.Value;
   return { userId: sub!, email: email! };
+}
+
+export async function refreshTokens(refreshToken: string) {
+  const res = await getClient().send(new InitiateAuthCommand({
+    AuthFlow: AuthFlowType.REFRESH_TOKEN_AUTH,
+    ClientId: clientId(),
+    AuthParameters: { REFRESH_TOKEN: refreshToken },
+  }));
+  return res.AuthenticationResult!;
 }

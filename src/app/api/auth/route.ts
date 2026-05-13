@@ -26,12 +26,23 @@ export async function POST(request: Request) {
         maxAge: result.ExpiresIn ?? 3600,
         path: '/',
       });
+      // 保存 refresh token，有效期 30 天
+      if (result.RefreshToken) {
+        cookieStore.set('refresh_token', result.RefreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 30,
+          path: '/',
+        });
+      }
       return Response.json({ ok: true });
     }
 
     if (action === 'signout') {
       const cookieStore = await cookies();
       cookieStore.delete('access_token');
+      cookieStore.delete('refresh_token');
       return Response.json({ ok: true });
     }
 
