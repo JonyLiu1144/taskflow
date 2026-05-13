@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Todo, TodoList, ViewFilter, Priority } from '@/types/todo';
 import CelebrationToast from './CelebrationToast';
 import TimeStats from './TimeStats';
@@ -85,7 +85,10 @@ interface EditRowProps {
   onSave: (updates: Partial<Todo>) => void;
   onCancel: () => void;
 }
-function EditRow({ todo, lists, onSave, onCancel }: EditRowProps) {
+export interface EditRowHandle {
+  save: () => void;
+}
+const EditRow = forwardRef<EditRowHandle, EditRowProps>(function EditRow({ todo, lists, onSave, onCancel }, ref) {
   const [title, setTitle]       = useState(todo.title);
   const [priority, setPriority] = useState<Priority>(todo.priority);
   const [dueDate, setDueDate]   = useState(todo.dueDate ?? '');
@@ -94,6 +97,11 @@ function EditRow({ todo, lists, onSave, onCancel }: EditRowProps) {
   const [showSubs, setShowSubs] = useState(false);
   const [subtasks, setSubtasks] = useState(todo.subtasks);
   const [subInput, setSubInput] = useState('');
+
+  // Expose save() so parent can trigger auto-save on click-outside
+  useImperativeHandle(ref, () => ({
+    save: () => onSave({ title, priority, dueDate: dueDate || null, listId, description: desc, subtasks }),
+  }), [title, priority, dueDate, listId, desc, subtasks, onSave]);
 
   function addSub() {
     if (!subInput.trim()) return;
@@ -204,7 +212,7 @@ function EditRow({ todo, lists, onSave, onCancel }: EditRowProps) {
       </div>
     </div>
   );
-}
+});
 
 /* ── drop indicator ── */
 function DropLine() {
@@ -222,6 +230,7 @@ interface ItemProps {
   isEditing: boolean;
   timerLinked: boolean;
   isDragging: boolean;
+  editRowRef?: React.Ref<EditRowHandle>;
   onClick: () => void;
   onToggle: () => void;
   onDelete: () => void;
@@ -233,6 +242,7 @@ interface ItemProps {
 
 function TaskItem({
   todo, lists, isSelected, isEditing, timerLinked, isDragging,
+  editRowRef,
   onClick, onToggle, onDelete, onUpdate, onEditEnd,
   onToggleTracking, onLinkTimer,
 }: ItemProps) {
@@ -296,6 +306,7 @@ function TaskItem({
   if (isEditing) {
     return (
       <EditRow
+        ref={editRowRef}
         todo={todo}
         lists={lists}
         onSave={updates => { onUpdate(updates); onEditEnd(); }}
@@ -708,6 +719,12 @@ export default function TaskList({
   const [dropPos, setDropPos]                 = useState<'before' | 'after'>('after');
   const [quickInput, setQuickInput]           = useState('');
   const quickInputRef                         = useRef<HTMLInputElement>(null);
+  const editRowRef                            = useRef<EditRowHandle>(null);
+
+  function closeEdit() {
+    editRowRef.current?.save();
+    setEditingId(null);
+  }
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -810,6 +827,7 @@ export default function TaskList({
                 isEditing={editingId === t.id}
                 timerLinked={timerLinkedTodo === t.id}
                 isDragging={beingDragged}
+                editRowRef={editingId === t.id ? editRowRef : undefined}
                 onClick={() => { setEditingId(t.id); onSelectTodo(t.id); }}
                 onToggle={() => handleToggle(t.id)}
                 onDelete={() => onDeleteTodo(t.id)}
@@ -869,7 +887,7 @@ export default function TaskList({
       </div>
 
       {/* Task list */}
-      <div className="flex-1 overflow-y-auto py-4" onClick={() => setEditingId(null)}>
+      <div className="flex-1 overflow-y-auto py-4" onClick={() => closeEdit()}>
         <TimeStats todos={todos} lists={lists} />
 
         {selectedView !== 'completed' && (
