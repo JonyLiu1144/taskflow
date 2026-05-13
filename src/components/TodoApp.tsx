@@ -172,13 +172,15 @@ export default function TodoApp() {
   }, []);
 
   const toggleTracking = useCallback((id: string) => {
+    const todayKey = new Date().toISOString().split('T')[0];
     setTodos(prev => {
       const next = prev.map(t => {
         if (t.id === id) {
           if (t.isTracking) {
             const extra = t.trackingStart ? Math.floor((Date.now() - t.trackingStart) / 1000) : 0;
-            const updated = { ...t, isTracking: false, trackingStart: null, timeSpent: t.timeSpent + extra };
-            fetch(`/api/todos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isTracking: false, trackingStart: null, timeSpent: updated.timeSpent }) });
+            const dailyTime = { ...(t.dailyTime ?? {}), [todayKey]: (t.dailyTime?.[todayKey] ?? 0) + extra };
+            const updated = { ...t, isTracking: false, trackingStart: null, timeSpent: t.timeSpent + extra, dailyTime };
+            fetch(`/api/todos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isTracking: false, trackingStart: null, timeSpent: updated.timeSpent, dailyTime: updated.dailyTime }) });
             return updated;
           }
           const updated = { ...t, isTracking: true, trackingStart: Date.now(), startedAt: t.startedAt ?? new Date().toISOString() };
@@ -187,8 +189,9 @@ export default function TodoApp() {
         }
         if (t.isTracking) {
           const extra = t.trackingStart ? Math.floor((Date.now() - t.trackingStart) / 1000) : 0;
-          const updated = { ...t, isTracking: false, trackingStart: null, timeSpent: t.timeSpent + extra };
-          fetch(`/api/todos/${t.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isTracking: false, trackingStart: null, timeSpent: updated.timeSpent }) });
+          const dailyTime = { ...(t.dailyTime ?? {}), [todayKey]: (t.dailyTime?.[todayKey] ?? 0) + extra };
+          const updated = { ...t, isTracking: false, trackingStart: null, timeSpent: t.timeSpent + extra, dailyTime };
+          fetch(`/api/todos/${t.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isTracking: false, trackingStart: null, timeSpent: updated.timeSpent, dailyTime: updated.dailyTime }) });
           return updated;
         }
         return t;
@@ -215,10 +218,12 @@ export default function TodoApp() {
   }, [selectedView]);
 
   const addTimerTime = useCallback((todoId: string, seconds: number) => {
+    const todayKey = new Date().toISOString().split('T')[0];
     setTodos(p => p.map(t => {
       if (t.id !== todoId) return t;
-      const updated = { ...t, timeSpent: t.timeSpent + seconds };
-      fetch(`/api/todos/${todoId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timeSpent: updated.timeSpent }) });
+      const dailyTime = { ...(t.dailyTime ?? {}), [todayKey]: (t.dailyTime?.[todayKey] ?? 0) + seconds };
+      const updated = { ...t, timeSpent: t.timeSpent + seconds, dailyTime };
+      fetch(`/api/todos/${todoId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timeSpent: updated.timeSpent, dailyTime: updated.dailyTime }) });
       return updated;
     }));
   }, []);
