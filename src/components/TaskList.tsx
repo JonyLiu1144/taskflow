@@ -322,8 +322,8 @@ function TaskItem({
   return (
     <div
       className={`task-card task-item group relative mx-4 mb-1.5 flex overflow-hidden rounded-xl cursor-pointer
-        bg-white border
-        ${todo.isTracking ? 'border-emerald-300/70' : 'border-slate-100/80'}
+        bg-white border border-slate-200
+        ${todo.isTracking ? '!border-emerald-300' : ''}
         ${todo.completed ? 'opacity-50' : ''}
         ${flashing ? 'animate-task-flash' : ''}
         ${isDragging ? 'opacity-25 scale-95 !shadow-none pointer-events-none' : ''}
