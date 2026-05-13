@@ -50,6 +50,25 @@ export async function putTodo(userId: string, todo: Todo) {
 export async function updateTodo(userId: string, todoId: string, updates: Partial<Todo>) {
   const entries = Object.entries(updates);
   if (!entries.length) return;
+
+  // If updating time-related fields, use PutCommand to avoid DynamoDB Map type issues
+  // First fetch the existing item, merge, then put
+  if ('dailyTime' in updates || 'timeSpent' in updates) {
+    const existing = await getDb().send(new QueryCommand({
+      TableName: TODOS_TABLE,
+      KeyConditionExpression: 'userId = :uid AND todoId = :tid',
+      ExpressionAttributeValues: { ':uid': userId, ':tid': todoId },
+    }));
+    const item = existing.Items?.[0];
+    if (item) {
+      await getDb().send(new PutCommand({
+        TableName: TODOS_TABLE,
+        Item: { ...item, ...updates },
+      }));
+      return;
+    }
+  }
+
   const expr = entries.map((_, i) => `#k${i} = :v${i}`).join(', ');
   const names = Object.fromEntries(entries.map(([k], i) => [`#k${i}`, k]));
   const values = Object.fromEntries(entries.map(([, v], i) => [`:v${i}`, v]));
