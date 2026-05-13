@@ -762,7 +762,7 @@ export default function TaskList({
   };
   const currentList = lists.find(l => l.id === selectedView);
   const headerTitle = currentList?.name ?? viewLabel[selectedView] ?? '任务';
-  const defaultListId = currentList?.id ?? (lists[0]?.id ?? '');
+  const defaultListId = currentList?.id ?? lists.find(l => l.id === 'personal')?.id ?? (lists[0]?.id ?? '');
 
   function renderGroup(label: string, items: Todo[], labelClass = 'text-slate-500') {
     if (!items.length) return null;
