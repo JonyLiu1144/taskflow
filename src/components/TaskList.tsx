@@ -690,6 +690,8 @@ export default function TaskList({
   const [draggedId, setDraggedId]             = useState<string | null>(null);
   const [dragOverId, setDragOverId]           = useState<string | null>(null);
   const [dropPos, setDropPos]                 = useState<'before' | 'after'>('after');
+  const [quickInput, setQuickInput]           = useState('');
+  const quickInputRef                         = useRef<HTMLInputElement>(null);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -818,7 +820,29 @@ export default function TaskList({
         <span className="text-sm text-slate-400 font-medium tabular-nums bg-slate-100 px-2 py-0.5 rounded-full">
           {active.length}
         </span>
-        <div className="ml-auto flex items-center gap-2 text-xs text-slate-400">
+
+        {/* Quick add input */}
+        {selectedView !== 'completed' && (
+          <form
+            className="flex-1 flex items-center gap-2 ml-2"
+            onSubmit={e => {
+              e.preventDefault();
+              if (!quickInput.trim()) return;
+              onAddTodo(quickInput.trim(), defaultListId, 4, null);
+              setQuickInput('');
+            }}
+          >
+            <input
+              ref={quickInputRef}
+              value={quickInput}
+              onChange={e => setQuickInput(e.target.value)}
+              placeholder="快速添加任务，回车确认…"
+              className="flex-1 text-sm bg-slate-100 hover:bg-slate-200/70 focus:bg-white border border-transparent focus:border-indigo-300 focus:shadow-sm rounded-xl px-3.5 py-1.5 outline-none text-slate-700 placeholder-slate-400 transition-all"
+            />
+          </form>
+        )}
+
+        <div className="flex items-center gap-2 text-xs text-slate-400">
           {todos.some(t => t.isTracking) && (
             <span className="flex items-center gap-1.5 text-green-600 font-medium animate-pulse">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500"/>计时中
