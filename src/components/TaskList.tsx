@@ -311,13 +311,14 @@ function TaskItem({
   return (
     <div
       className={`task-card task-item group relative mx-4 mb-1.5 flex overflow-hidden rounded-xl cursor-pointer
-        bg-white border border-slate-100/80
+        bg-white border
+        ${todo.isTracking ? 'border-emerald-300/70' : 'border-slate-100/80'}
         ${todo.completed ? 'opacity-50' : ''}
         ${flashing ? 'animate-task-flash' : ''}
         ${isDragging ? 'opacity-25 scale-95 !shadow-none pointer-events-none' : ''}
         ${todo.priority === 1 ? 'task-card-urgent' : ''}
       `}
-      style={{ boxShadow: isDragging ? 'none' : cardShadow }}
+      style={{ boxShadow: isDragging ? 'none' : todo.isTracking ? `0 0 0 2px rgba(52,211,153,0.25), 0 4px 20px rgba(52,211,153,0.12), ${cfg.cardGlow}` : cardShadow }}
       onClick={onClick}
     >
       {/* ── Gradient accent bar ── */}
@@ -473,22 +474,29 @@ function TaskItem({
               <button
                 onClick={e => { e.stopPropagation(); onToggleTracking(); }}
                 title={todo.isTracking ? '停止计时' : '开始计时'}
-                className={`inline-flex items-center gap-1.5 px-2 py-[3px] rounded-md text-[11px] font-mono font-medium transition-all ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono font-semibold transition-all duration-200 ${
                   todo.isTracking
-                    ? 'bg-slate-900 text-emerald-400'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    ? 'bg-slate-900 text-emerald-400 animate-timer-glow'
+                    : 'bg-slate-100 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600'
                 }`}
-                style={todo.isTracking ? { boxShadow: '0 0 10px rgba(52,211,153,0.25)' } : {}}
               >
-                {todo.isTracking
-                  ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-rec shrink-0"/>
-                      <span>{formatTimeChinese(todo.timeSpent)}</span>
-                      <span className="text-emerald-600/80 text-[9px] font-sans tracking-wider">REC</span></>
-                  : <><svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {todo.isTracking ? (
+                  <>
+                    <span className="relative flex w-2 h-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"/>
+                      <span className="relative inline-flex rounded-full w-2 h-2 bg-emerald-400"/>
+                    </span>
+                    <span>{formatTimeChinese(todo.timeSpent)}</span>
+                    <span className="text-emerald-600/70 text-[9px] font-sans tracking-widest">REC</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    <span>{formatTimeChinese(todo.timeSpent)}</span></>
-                }
+                    <span>{formatTimeChinese(todo.timeSpent)}</span>
+                  </>
+                )}
               </button>
             )}
 
@@ -538,11 +546,19 @@ function TaskItem({
 
         {/* ── Hover action strip ── */}
         <div className="task-actions absolute right-1 top-1 flex flex-col gap-0.5">
+          {/* Timer button — always visible when tracking, hover-visible otherwise */}
           <button onClick={e => { e.stopPropagation(); onToggleTracking(); }}
-            className={`p-1.5 rounded-lg transition-all ${todo.isTracking ? 'text-emerald-600 bg-emerald-50' : 'text-slate-300 hover:text-slate-600 hover:bg-slate-100'}`}
+            className={`relative p-1.5 rounded-lg transition-all duration-200 ${
+              todo.isTracking
+                ? 'timer-btn-tracking text-emerald-500 bg-emerald-50 animate-tracking-pulse'
+                : 'text-slate-300 hover:text-emerald-500 hover:bg-emerald-50'
+            }`}
             title={todo.isTracking ? '停止计时' : '开始计时'}>
+            {todo.isTracking && (
+              <span className="absolute inset-0 rounded-lg bg-emerald-400/20 animate-timer-ripple" />
+            )}
             {todo.isTracking
-              ? <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>
+              ? <svg className="w-3.5 h-3.5 relative z-10" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>
               : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             }
           </button>
