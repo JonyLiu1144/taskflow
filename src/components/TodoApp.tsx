@@ -48,7 +48,6 @@ export default function TodoApp() {
       setLists(DEFAULT_LISTS);
     }).finally(() => setHydrated(true));
   }, []);
-
   // Task time tracking ticker
   useEffect(() => {
     const id = setInterval(() => {
