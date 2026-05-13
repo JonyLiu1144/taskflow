@@ -339,8 +339,11 @@ function TaskItem({
       <div className="relative flex flex-1 min-w-0 gap-2 px-3 py-2 pr-8">
 
         {/* Drag grip */}
-        <div className="self-start mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity
-          text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing -ml-1.5">
+        <div
+          data-drag-handle
+          className="self-start mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity
+          text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing -ml-1.5"
+        >
           <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
             <circle cx="5.5" cy="3.5" r="1.3"/><circle cx="10.5" cy="3.5" r="1.3"/>
             <circle cx="5.5" cy="8"   r="1.3"/><circle cx="10.5" cy="8"   r="1.3"/>
@@ -736,40 +739,57 @@ export default function TaskList({
     onToggleTodo(id);
   }
 
-  function handleDragStart(e: React.DragEvent, id: string) {
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', id);
-    // Small delay so the drag image renders before opacity change
+  // ── Pointer-based drag-to-reorder ──
+  const dragState = useRef<{
+    id: string;
+    itemEls: { id: string; top: number; height: number }[];
+  } | null>(null);
+
+  function getItemEls() {
+    const els = document.querySelectorAll<HTMLElement>('[data-todo-id]');
+    return Array.from(els).map(el => {
+      const rect = el.getBoundingClientRect();
+      return { id: el.dataset.todoId!, top: rect.top, height: rect.height };
+    });
+  }
+
+  function handlePointerDown(e: React.PointerEvent, id: string) {
+    const target = e.target as HTMLElement;
+    if (!target.closest('[data-drag-handle]')) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragState.current = { id, itemEls: getItemEls() };
     requestAnimationFrame(() => setDraggedId(id));
   }
 
-  function handleDragOver(e: React.DragEvent, id: string) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (id === draggedId) return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setDragOverId(id);
-    setDropPos(e.clientY < rect.top + rect.height / 2 ? 'before' : 'after');
-  }
-
-  function handleDragLeave(e: React.DragEvent) {
-    if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
-      setDragOverId(null);
+  function handlePointerMove(e: React.PointerEvent, id: string) {
+    if (!dragState.current || dragState.current.id !== id) return;
+    const y = e.clientY;
+    let found = false;
+    for (const item of dragState.current.itemEls) {
+      if (item.id === id) continue;
+      if (y >= item.top && y <= item.top + item.height) {
+        setDragOverId(item.id);
+        setDropPos(y < item.top + item.height / 2 ? 'before' : 'after');
+        found = true;
+        break;
+      }
     }
+    if (!found) setDragOverId(null);
   }
 
-  function handleDrop(e: React.DragEvent, targetId: string) {
-    e.preventDefault();
-    const srcId = e.dataTransfer.getData('text/plain') || draggedId;
-    if (!srcId || srcId === targetId) { setDraggedId(null); setDragOverId(null); return; }
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const pos: 'before' | 'after' = e.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
-    onReorderTodos(srcId, targetId, pos);
+  function handlePointerUp(e: React.PointerEvent, id: string) {
+    if (!dragState.current || dragState.current.id !== id) return;
+    if (dragOverId && dragOverId !== id) {
+      onReorderTodos(id, dragOverId, dropPos);
+    }
+    dragState.current = null;
     setDraggedId(null);
     setDragOverId(null);
   }
 
-  function handleDragEnd() {
+  function handlePointerCancel() {
+    dragState.current = null;
     setDraggedId(null);
     setDragOverId(null);
   }
@@ -810,14 +830,14 @@ export default function TaskList({
           return (
             <div
               key={t.id}
-              draggable
-              onDragStart={e => handleDragStart(e, t.id)}
-              onDragOver={e => handleDragOver(e, t.id)}
-              onDragLeave={handleDragLeave}
-              onDrop={e => handleDrop(e, t.id)}
-              onDragEnd={handleDragEnd}
+              data-todo-id={t.id}
+              onPointerDown={e => handlePointerDown(e, t.id)}
+              onPointerMove={e => handlePointerMove(e, t.id)}
+              onPointerUp={e => handlePointerUp(e, t.id)}
+              onPointerCancel={handlePointerCancel}
               onClick={e => e.stopPropagation()}
-              className={beingDragged ? 'cursor-grabbing' : ''}
+              className={`relative ${beingDragged ? 'opacity-40' : ''}`}
+              style={{ touchAction: 'none' }}
             >
               {isTarget && dropPos === 'before' && <DropLine />}
               <TaskItem
