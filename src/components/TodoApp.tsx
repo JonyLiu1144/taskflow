@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Todo, TodoList, ViewFilter, Priority } from '@/types/todo';
 import Sidebar from './Sidebar';
 import TaskList from './TaskList';
@@ -23,6 +23,9 @@ export default function TodoApp() {
   const [showTimer,      setShowTimer     ] = useState(true);
   const [timerLinked,    setTimerLinked   ] = useState<string | null>(null);
   const [hydrated,       setHydrated      ] = useState(false);
+  // Keep a ref to latest todos for use in event listeners
+  const todosRef = useRef<Todo[]>([]);
+  useEffect(() => { todosRef.current = todos; }, [todos]);
 
   // Load from API
   useEffect(() => {
@@ -64,6 +67,43 @@ export default function TodoApp() {
       });
     }, 1000);
     return () => clearInterval(id);
+  }, []);
+
+  // Sync tracking todos to API every 30s
+  useEffect(() => {
+    const id = setInterval(() => {
+      const tracking = todosRef.current.filter(t => t.isTracking);
+      tracking.forEach(t => {
+        fetch(`/api/todos/${t.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeSpent: t.timeSpent, dailyTime: t.dailyTime, trackingStart: t.trackingStart }),
+        });
+      });
+    }, 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Save tracking state before page unload
+  useEffect(() => {
+    function handleBeforeUnload() {
+      const tracking = todosRef.current.filter(t => t.isTracking);
+      tracking.forEach(t => {
+        const extra = t.trackingStart ? Math.floor((Date.now() - t.trackingStart) / 1000) : 0;
+        const todayKey = new Date().toISOString().split('T')[0];
+        const dailyTime = { ...(t.dailyTime ?? {}), [todayKey]: (t.dailyTime?.[todayKey] ?? 0) + extra };
+        const finalTimeSpent = t.timeSpent + extra;
+        // keepalive ensures the request completes even as the page unloads
+        fetch(`/api/todos/${t.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeSpent: finalTimeSpent, dailyTime, isTracking: false, trackingStart: null }),
+          keepalive: true,
+        });
+      });
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
   const addTodo = useCallback((
