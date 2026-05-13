@@ -799,6 +799,7 @@ export default function TaskList({
               onDragLeave={handleDragLeave}
               onDrop={e => handleDrop(e, t.id)}
               onDragEnd={handleDragEnd}
+              onClick={e => e.stopPropagation()}
               className={beingDragged ? 'cursor-grabbing' : ''}
             >
               {isTarget && dropPos === 'before' && <DropLine />}
@@ -868,7 +869,7 @@ export default function TaskList({
       </div>
 
       {/* Task list */}
-      <div className="flex-1 overflow-y-auto py-4">
+      <div className="flex-1 overflow-y-auto py-4" onClick={() => setEditingId(null)}>
         <TimeStats todos={todos} lists={lists} />
 
         {selectedView !== 'completed' && (
