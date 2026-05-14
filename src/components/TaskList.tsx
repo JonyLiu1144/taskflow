@@ -226,6 +226,7 @@ function DropLine() {
 interface ItemProps {
   todo: Todo;
   lists: TodoList[];
+  index: number;
   isSelected: boolean;
   isEditing: boolean;
   timerLinked: boolean;
@@ -241,7 +242,7 @@ interface ItemProps {
 }
 
 function TaskItem({
-  todo, lists, isSelected, isEditing, timerLinked, isDragging,
+  todo, lists, index, isSelected, isEditing, timerLinked, isDragging,
   editRowRef,
   onClick, onToggle, onDelete, onUpdate, onEditEnd,
   onToggleTracking, onLinkTimer,
@@ -338,17 +339,22 @@ function TaskItem({
       {/* ── Card body ── */}
       <div className="relative flex flex-1 min-w-0 gap-2 px-3 py-2 pr-8">
 
-        {/* Drag grip */}
-        <div
-          data-drag-handle
-          className="self-start mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity
-          text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing -ml-1.5"
-        >
-          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
-            <circle cx="5.5" cy="3.5" r="1.3"/><circle cx="10.5" cy="3.5" r="1.3"/>
-            <circle cx="5.5" cy="8"   r="1.3"/><circle cx="10.5" cy="8"   r="1.3"/>
-            <circle cx="5.5" cy="12.5" r="1.3"/><circle cx="10.5" cy="12.5" r="1.3"/>
-          </svg>
+        {/* Drag grip + index */}
+        <div className="self-start mt-0.5 shrink-0 flex flex-col items-center gap-0.5 -ml-1.5">
+          <div
+            data-drag-handle
+            className="opacity-0 group-hover:opacity-100 transition-opacity
+            text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing"
+          >
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
+              <circle cx="5.5" cy="3.5" r="1.3"/><circle cx="10.5" cy="3.5" r="1.3"/>
+              <circle cx="5.5" cy="8"   r="1.3"/><circle cx="10.5" cy="8"   r="1.3"/>
+              <circle cx="5.5" cy="12.5" r="1.3"/><circle cx="10.5" cy="12.5" r="1.3"/>
+            </svg>
+          </div>
+          <span className="text-[10px] font-mono text-slate-300 group-hover:opacity-0 transition-opacity leading-none select-none">
+            {index}
+          </span>
         </div>
 
         {/* Checkbox */}
@@ -817,16 +823,17 @@ export default function TaskList({
   const headerTitle = currentList?.name ?? viewLabel[selectedView] ?? '任务';
   const defaultListId = currentList?.id ?? lists.find(l => l.id === 'work')?.id ?? (lists[0]?.id ?? '');
 
-  function renderGroup(label: string, items: Todo[], labelClass = 'text-slate-500') {
+  function renderGroup(label: string, items: Todo[], labelClass = 'text-slate-500', startIndex = 0) {
     if (!items.length) return null;
     return (
       <div key={label} className="mb-2">
         <div className={`px-4 pb-1.5 text-xs font-semibold uppercase tracking-wide ${labelClass}`}>
           {label} · {items.length}
         </div>
-        {items.map(t => {
+        {items.map((t, i) => {
           const beingDragged = draggedId === t.id;
           const isTarget     = dragOverId === t.id && !beingDragged;
+          const index        = startIndex + i + 1;
           return (
             <div
               key={t.id}
@@ -842,6 +849,7 @@ export default function TaskList({
               {isTarget && dropPos === 'before' && <DropLine />}
               <TaskItem
                 todo={t}
+                index={index}
                 lists={lists}
                 isSelected={selectedTodoId === t.id}
                 isEditing={editingId === t.id}
@@ -922,9 +930,9 @@ export default function TaskList({
           </div>
         )}
 
-        {renderGroup('已逾期', overdue, 'text-red-400')}
-        {renderGroup('今天', todayTodos, 'text-orange-500')}
-        {renderGroup('其他', rest)}
+        {renderGroup('已逾期', overdue, 'text-red-400', 0)}
+        {renderGroup('今天', todayTodos, 'text-orange-500', overdue.length)}
+        {renderGroup('其他', rest, 'text-slate-500', overdue.length + todayTodos.length)}
 
         {/* Completed section */}
         {completed.length > 0 && selectedView !== 'completed' && (
