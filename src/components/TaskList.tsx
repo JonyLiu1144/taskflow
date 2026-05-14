@@ -949,10 +949,11 @@ export default function TaskList({
               </svg>
               已完成 · {completed.length}
             </button>
-            {showCompleted && completed.map(t => (
+            {showCompleted && completed.map((t, i) => (
               <TaskItem
                 key={t.id}
                 todo={t}
+                index={active.length + i + 1}
                 lists={lists}
                 isSelected={false}
                 isEditing={false}
@@ -982,10 +983,11 @@ export default function TaskList({
                 <div className="px-4 pb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
                   已完成 · {completed.length}
                 </div>
-                {completed.map(t => (
+                {completed.map((t, i) => (
                   <TaskItem
                     key={t.id}
                     todo={t}
+                    index={i + 1}
                     lists={lists}
                     isSelected={false}
                     isEditing={false}
