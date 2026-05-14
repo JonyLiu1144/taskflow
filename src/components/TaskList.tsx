@@ -352,7 +352,7 @@ function TaskItem({
               <circle cx="5.5" cy="12.5" r="1.3"/><circle cx="10.5" cy="12.5" r="1.3"/>
             </svg>
           </div>
-          <span className="text-[10px] font-mono text-slate-300 group-hover:opacity-0 transition-opacity leading-none select-none">
+          <span className="text-[11px] font-mono font-semibold text-slate-400 group-hover:opacity-0 transition-opacity leading-none select-none">
             {index}
           </span>
         </div>
