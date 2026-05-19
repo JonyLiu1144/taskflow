@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { Todo, TodoList, ViewFilter, Priority } from '@/types/todo';
+import { Todo, TodoList, ViewFilter, Priority, Milestone } from '@/types/todo';
 import CelebrationToast from './CelebrationToast';
 import TimeStats from './TimeStats';
 
@@ -89,24 +89,35 @@ export interface EditRowHandle {
   save: () => void;
 }
 const EditRow = forwardRef<EditRowHandle, EditRowProps>(function EditRow({ todo, lists, onSave, onCancel }, ref) {
-  const [title, setTitle]       = useState(todo.title);
-  const [priority, setPriority] = useState<Priority>(todo.priority);
-  const [dueDate, setDueDate]   = useState(todo.dueDate ?? '');
-  const [listId, setListId]     = useState(todo.listId);
-  const [desc, setDesc]         = useState(todo.description);
-  const [showSubs, setShowSubs] = useState(false);
-  const [subtasks, setSubtasks] = useState(todo.subtasks);
-  const [subInput, setSubInput] = useState('');
+  const [title, setTitle]             = useState(todo.title);
+  const [priority, setPriority]       = useState<Priority>(todo.priority);
+  const [dueDate, setDueDate]         = useState(todo.dueDate ?? '');
+  const [listId, setListId]           = useState(todo.listId);
+  const [desc, setDesc]               = useState(todo.description);
+  const [showSubs, setShowSubs]       = useState(false);
+  const [subtasks, setSubtasks]       = useState(todo.subtasks);
+  const [subInput, setSubInput]       = useState('');
+  const [showMilestones, setShowMilestones] = useState((todo.milestones ?? []).length > 0);
+  const [milestones, setMilestones]   = useState<Milestone[]>(todo.milestones ?? []);
+  const [msInput, setMsInput]         = useState('');
+  const [msDate, setMsDate]           = useState('');
 
   // Expose save() so parent can trigger auto-save on click-outside
   useImperativeHandle(ref, () => ({
-    save: () => onSave({ title, priority, dueDate: dueDate || null, listId, description: desc, subtasks }),
-  }), [title, priority, dueDate, listId, desc, subtasks, onSave]);
+    save: () => onSave({ title, priority, dueDate: dueDate || null, listId, description: desc, subtasks, milestones }),
+  }), [title, priority, dueDate, listId, desc, subtasks, milestones, onSave]);
 
   function addSub() {
     if (!subInput.trim()) return;
     setSubtasks(prev => [...prev, { id: genId(), title: subInput.trim(), completed: false }]);
     setSubInput('');
+  }
+
+  function addMilestone() {
+    if (!msInput.trim()) return;
+    setMilestones(prev => [...prev, { id: genId(), title: msInput.trim(), date: msDate || null, completed: false }]);
+    setMsInput('');
+    setMsDate('');
   }
 
   return (
@@ -164,6 +175,14 @@ const EditRow = forwardRef<EditRowHandle, EditRowProps>(function EditRow({ todo,
         >
           📋 子任务 {subtasks.length > 0 && `(${subtasks.filter(s => s.completed).length}/${subtasks.length})`}
         </button>
+
+        {/* Milestones toggle */}
+        <button
+          onClick={() => setShowMilestones(s => !s)}
+          className="text-xs bg-slate-100 rounded-lg px-2.5 py-1.5 text-slate-600 hover:bg-slate-200 transition-colors"
+        >
+          🏁 里程碑 {milestones.length > 0 && `(${milestones.filter(m => m.completed).length}/${milestones.length})`}
+        </button>
       </div>
 
       {showSubs && (
@@ -200,13 +219,74 @@ const EditRow = forwardRef<EditRowHandle, EditRowProps>(function EditRow({ todo,
         </div>
       )}
 
+      {/* ── Milestones editor ── */}
+      {showMilestones && (
+        <div className="mb-3 animate-slide-down">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">里程碑时间线</div>
+          {milestones.length > 0 && (
+            <div className="relative ml-1 mb-3">
+              {/* vertical line */}
+              <div className="absolute left-[7px] top-2 bottom-2 w-px bg-slate-200" />
+              <div className="space-y-2">
+                {milestones.map((m, i) => (
+                  <div key={m.id} className="flex items-start gap-3 relative">
+                    {/* dot */}
+                    <button
+                      onClick={() => setMilestones(prev => prev.map(x => x.id === m.id ? { ...x, completed: !x.completed } : x))}
+                      className={`relative z-10 mt-0.5 w-3.5 h-3.5 rounded-full border-2 shrink-0 transition-all ${
+                        m.completed ? 'bg-indigo-500 border-indigo-500' : 'bg-white border-slate-300 hover:border-indigo-400'
+                      }`}
+                    >
+                      {m.completed && (
+                        <svg className="w-2 h-2 text-white absolute inset-0 m-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
+                        </svg>
+                      )}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-xs ${m.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>{m.title}</span>
+                      {m.date && <span className="ml-2 text-[10px] text-slate-400">{m.date}</span>}
+                    </div>
+                    <button
+                      onClick={() => setMilestones(prev => prev.filter((_, j) => j !== i))}
+                      className="text-slate-300 hover:text-red-400 transition-colors shrink-0"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Add milestone input */}
+          <div className="flex gap-1.5 items-center">
+            <input
+              value={msInput}
+              onChange={e => setMsInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addMilestone(); }}
+              placeholder="里程碑名称…"
+              className="flex-1 text-xs bg-slate-100 rounded-lg px-2.5 py-1.5 outline-none text-slate-600 placeholder-slate-400"
+            />
+            <input
+              type="date"
+              value={msDate}
+              onChange={e => setMsDate(e.target.value)}
+              className="text-xs bg-slate-100 border-none outline-none rounded-lg px-2 py-1.5 text-slate-600 cursor-pointer"
+            />
+            <button onClick={addMilestone} className="text-xs bg-indigo-500 text-white rounded-lg px-2.5 py-1.5 hover:bg-indigo-600 transition-colors shrink-0">+</button>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2 justify-end">
         <button
           onClick={onCancel}
           className="px-3.5 py-1.5 text-xs text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
         >取消</button>
         <button
-          onClick={() => onSave({ title, priority, dueDate: dueDate || null, listId, description: desc, subtasks })}
+          onClick={() => onSave({ title, priority, dueDate: dueDate || null, listId, description: desc, subtasks, milestones })}
           className="px-4 py-1.5 text-xs bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors font-medium shadow-sm"
         >保存</button>
       </div>
@@ -483,6 +563,53 @@ function TaskItem({
                 placeholder="添加子任务…"
                 className="flex-1 text-[11px] text-slate-600 bg-transparent outline-none placeholder-slate-300 border-b border-slate-200 pb-0.5"
               />
+            </div>
+          )}
+
+          {/* ── Milestone timeline ── */}
+          {(todo.milestones ?? []).length > 0 && (
+            <div className="relative ml-0.5 mt-1" onClick={e => e.stopPropagation()}>
+              {/* vertical line */}
+              <div className="absolute left-[5px] top-2 bottom-2 w-px bg-slate-200" />
+              <div className="space-y-1.5">
+                {(todo.milestones ?? []).map(m => (
+                  <div key={m.id} className="flex items-start gap-2.5">
+                    {/* dot */}
+                    <button
+                      onClick={() => {
+                        const updated = (todo.milestones ?? []).map(x => x.id === m.id ? { ...x, completed: !x.completed } : x);
+                        onUpdate({ milestones: updated });
+                      }}
+                      className={`relative z-10 mt-0.5 w-[11px] h-[11px] rounded-full border-2 shrink-0 transition-all ${
+                        m.completed
+                          ? 'bg-indigo-500 border-indigo-500'
+                          : 'bg-white border-slate-300 hover:border-indigo-400'
+                      }`}
+                    >
+                      {m.completed && (
+                        <svg className="w-1.5 h-1.5 text-white absolute inset-0 m-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
+                        </svg>
+                      )}
+                    </button>
+                    <div className="flex items-baseline gap-1.5 min-w-0">
+                      <span className={`text-[11px] leading-snug ${m.completed ? 'line-through text-slate-400' : 'text-slate-600'}`}>
+                        {m.title}
+                      </span>
+                      {m.date && (
+                        <span className={`text-[10px] shrink-0 ${
+                          m.completed ? 'text-slate-300' :
+                          m.date < new Date().toISOString().split('T')[0] ? 'text-red-400' :
+                          m.date === new Date().toISOString().split('T')[0] ? 'text-amber-500' :
+                          'text-slate-400'
+                        }`}>
+                          {m.date}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

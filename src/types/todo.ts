@@ -6,6 +6,13 @@ export interface Subtask {
   completed: boolean;
 }
 
+export interface Milestone {
+  id: string;
+  title: string;
+  date: string | null;   // "YYYY-MM-DD"
+  completed: boolean;
+}
+
 export interface Todo {
   id: string;
   title: string;
@@ -16,6 +23,7 @@ export interface Todo {
   listId: string;
   tags: string[];
   subtasks: Subtask[];
+  milestones: Milestone[];
   createdAt: string;
   timeSpent: number;
   isTracking: boolean;

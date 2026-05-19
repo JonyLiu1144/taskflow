@@ -125,6 +125,7 @@ export default function TodoApp() {
       listId,
       tags: [],
       subtasks: [],
+      milestones: [],
       createdAt: new Date().toISOString(),
       timeSpent: 0,
       isTracking: false,
