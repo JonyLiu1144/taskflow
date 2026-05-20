@@ -1,6 +1,7 @@
 import { DynamoDBClient, ListTablesCommand } from '@aws-sdk/client-dynamodb';
+import { getCurrentUser } from '@/lib/auth-server';
 
-export async function GET() {
+export async function GET(request: Request) {
   const env = {
     COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID ?? null,
     NODE_ENV: process.env.NODE_ENV,
@@ -29,5 +30,8 @@ export async function GET() {
     dynamoTest = `✗ failed: ${String(err)}`;
   }
 
-  return Response.json({ env, dynamoTest });
+  // Show current logged-in user if any
+  const user = await getCurrentUser();
+
+  return Response.json({ env, dynamoTest, currentUser: user ?? null });
 }
