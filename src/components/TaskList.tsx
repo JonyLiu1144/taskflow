@@ -97,7 +97,7 @@ const EditRow = forwardRef<EditRowHandle, EditRowProps>(function EditRow({ todo,
   const [showSubs, setShowSubs]       = useState(false);
   const [subtasks, setSubtasks]       = useState(todo.subtasks);
   const [subInput, setSubInput]       = useState('');
-  const [showMilestones, setShowMilestones] = useState((todo.milestones ?? []).length > 0);
+  const [showMilestones, setShowMilestones] = useState(true);
   const [milestones, setMilestones]   = useState<Milestone[]>(todo.milestones ?? []);
   const [msInput, setMsInput]         = useState('');
   const [msDate, setMsDate]           = useState('');
@@ -233,7 +233,7 @@ const EditRow = forwardRef<EditRowHandle, EditRowProps>(function EditRow({ todo,
                     {/* dot */}
                     <button
                       onClick={() => setMilestones(prev => prev.map(x => x.id === m.id ? { ...x, completed: !x.completed } : x))}
-                      className={`relative z-10 mt-0.5 w-3.5 h-3.5 rounded-full border-2 shrink-0 transition-all ${
+                      className={`relative z-10 mt-1.5 w-3.5 h-3.5 rounded-full border-2 shrink-0 transition-all ${
                         m.completed ? 'bg-indigo-500 border-indigo-500' : 'bg-white border-slate-300 hover:border-indigo-400'
                       }`}
                     >
@@ -243,13 +243,25 @@ const EditRow = forwardRef<EditRowHandle, EditRowProps>(function EditRow({ todo,
                         </svg>
                       )}
                     </button>
-                    <div className="flex-1 min-w-0">
-                      <span className={`text-xs ${m.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>{m.title}</span>
-                      {m.date && <span className="ml-2 text-[10px] text-slate-400">{m.date}</span>}
+                    {/* Inline editable title + date */}
+                    <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                      <input
+                        value={m.title}
+                        onChange={e => setMilestones(prev => prev.map(x => x.id === m.id ? { ...x, title: e.target.value } : x))}
+                        className={`flex-1 text-xs bg-transparent outline-none border-b border-transparent hover:border-slate-200 focus:border-indigo-300 transition-colors py-0.5 ${
+                          m.completed ? 'line-through text-slate-400' : 'text-slate-700'
+                        }`}
+                      />
+                      <input
+                        type="date"
+                        value={m.date ?? ''}
+                        onChange={e => setMilestones(prev => prev.map(x => x.id === m.id ? { ...x, date: e.target.value || null } : x))}
+                        className="text-[10px] bg-transparent border-none outline-none text-slate-400 cursor-pointer w-28 shrink-0"
+                      />
                     </div>
                     <button
                       onClick={() => setMilestones(prev => prev.filter((_, j) => j !== i))}
-                      className="text-slate-300 hover:text-red-400 transition-colors shrink-0"
+                      className="text-slate-300 hover:text-red-400 transition-colors shrink-0 mt-1"
                     >
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
