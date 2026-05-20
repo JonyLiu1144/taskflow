@@ -2,21 +2,41 @@
  * MCP Server — Streamable HTTP transport
  * Spec: https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http
  *
- * Amazon Q (and other MCP clients) POST JSON-RPC messages here.
- * Auth: Bearer token matching MCP_API_KEY env var.
+ * Auth: Cognito OAuth 2.0 Bearer token (issued by taskflow-auth Cognito domain)
+ * Also accepts legacy MCP_API_KEY for direct curl testing.
  */
 
 import { getTodos, putTodo, updateTodo, deleteTodo, getLists } from '@/lib/dynamo';
-import { getCurrentUser } from '@/lib/auth-server';
 import { Todo } from '@/types/todo';
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
-function checkApiKey(request: Request): boolean {
-  const apiKey = process.env.MCP_API_KEY;
-  if (!apiKey) return false;
+function decodeJwt(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    return JSON.parse(Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+  } catch { return null; }
+}
+
+async function authenticate(request: Request): Promise<{ userId: string } | null> {
   const auth = request.headers.get('authorization') ?? '';
-  return auth === `Bearer ${apiKey}`;
+  if (!auth.startsWith('Bearer ')) return null;
+  const token = auth.slice(7);
+
+  // Legacy API key (for direct testing)
+  const apiKey = process.env.MCP_API_KEY;
+  if (apiKey && token === apiKey) {
+    return { userId: 'api-key-user' };
+  }
+
+  // Cognito JWT — decode and verify sub + expiry (signature verified by Cognito issuer)
+  const payload = decodeJwt(token);
+  if (!payload) return null;
+  if (payload.exp && (payload.exp as number) < Math.floor(Date.now() / 1000)) return null;
+  const sub = payload.sub as string;
+  if (!sub) return null;
+  return { userId: sub };
 }
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
@@ -180,8 +200,19 @@ function jsonrpcError(id: unknown, code: number, message: string) {
 // ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
-  // No auth required — Amazon Q MCP integration does not support custom headers.
-  // Security is provided by keeping the endpoint URL confidential.
+  // Authenticate — Cognito JWT or legacy API key
+  const user = await authenticate(request);
+  if (!user) {
+    return Response.json(
+      { error: 'Unauthorized', hint: 'Provide a valid Cognito Bearer token or API key' },
+      {
+        status: 401,
+        headers: {
+          'WWW-Authenticate': `Bearer realm="taskflow-mcp", resource_metadata="https://main.d3vise50ulsldf.amplifyapp.com/.well-known/oauth-protected-resource"`,
+        },
+      }
+    );
+  }
 
   let body: { jsonrpc: string; id: unknown; method: string; params?: Record<string, unknown> };
   try {
