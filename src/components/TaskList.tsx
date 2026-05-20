@@ -688,6 +688,15 @@ function TaskItem({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
                 {formatCreatedAt(todo.createdAt)}
+                {(() => {
+                  const days = Math.floor((Date.now() - new Date(todo.createdAt).getTime()) / 86400000);
+                  if (days === 0) return null;
+                  return (
+                    <span className="ml-0.5 px-1 py-px rounded text-[9px] font-semibold bg-slate-100 text-slate-400">
+                      {days}天
+                    </span>
+                  );
+                })()}
               </span>
               {todo.startedAt && (
                 <span className="inline-flex items-center gap-1 text-emerald-400/70">
