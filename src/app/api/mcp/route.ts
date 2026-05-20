@@ -180,10 +180,8 @@ function jsonrpcError(id: unknown, code: number, message: string) {
 // ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
-  // Auth check
-  if (!checkApiKey(request)) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  // No auth required — Amazon Q MCP integration does not support custom headers.
+  // Security is provided by keeping the endpoint URL confidential.
 
   let body: { jsonrpc: string; id: unknown; method: string; params?: Record<string, unknown> };
   try {
