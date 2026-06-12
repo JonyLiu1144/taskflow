@@ -133,6 +133,7 @@ async function handleToolCall(name: string, args: Record<string, unknown>, userI
         subtasks:     [],
         milestones:   [],
         createdAt:    new Date().toISOString(),
+        completedAt:  null,
         timeSpent:    0,
         isTracking:   false,
         trackingStart: null,
@@ -152,7 +153,10 @@ async function handleToolCall(name: string, args: Record<string, unknown>, userI
       if (args.description !== undefined) updates.description = args.description;
       if (args.priority    !== undefined) updates.priority    = args.priority;
       if (args.dueDate     !== undefined) updates.dueDate     = args.dueDate;
-      if (args.completed   !== undefined) updates.completed   = args.completed;
+      if (args.completed   !== undefined) {
+        updates.completed   = args.completed;
+        updates.completedAt = args.completed ? new Date().toISOString() : null;
+      }
       if (args.listId      !== undefined) updates.listId      = args.listId;
       await updateTodo(userId, todoId, updates);
       return { ok: true, todoId, updated: Object.keys(updates) };

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 're
 import { Todo, TodoList, ViewFilter, Priority, Milestone } from '@/types/todo';
 import CelebrationToast from './CelebrationToast';
 import TimeStats from './TimeStats';
+import DailyBadges from './DailyBadges';
 
 /* ── helpers ── */
 function genId() { return Math.random().toString(36).slice(2, 11); }
@@ -1064,6 +1065,7 @@ export default function TaskList({
 
       {/* Task list */}
       <div className="flex-1 overflow-y-auto py-4" onClick={() => closeEdit()}>
+        <DailyBadges todos={todos} />
         <TimeStats todos={todos} lists={lists} />
 
         {selectedView !== 'completed' && (

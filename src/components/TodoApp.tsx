@@ -127,6 +127,7 @@ export default function TodoApp() {
       subtasks: [],
       milestones: [],
       createdAt: new Date().toISOString(),
+      completedAt: null,
       timeSpent: 0,
       isTracking: false,
       trackingStart: null,
@@ -146,11 +147,13 @@ export default function TodoApp() {
   const toggleTodo = useCallback((id: string) => {
     setTodos(p => p.map(t => {
       if (t.id !== id) return t;
-      const updated = { ...t, completed: !t.completed, isTracking: false, trackingStart: null };
+      const nowCompleted = !t.completed;
+      const completedAt = nowCompleted ? new Date().toISOString() : null;
+      const updated = { ...t, completed: nowCompleted, completedAt, isTracking: false, trackingStart: null };
       fetch(`/api/todos/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: updated.completed, isTracking: false, trackingStart: null }),
+        body: JSON.stringify({ completed: updated.completed, completedAt, isTracking: false, trackingStart: null }),
       });
       return updated;
     }));

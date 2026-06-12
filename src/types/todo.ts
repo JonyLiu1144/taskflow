@@ -25,6 +25,7 @@ export interface Todo {
   subtasks: Subtask[];
   milestones: Milestone[];
   createdAt: string;
+  completedAt: string | null; // ISO timestamp when marked complete, null otherwise
   timeSpent: number;
   isTracking: boolean;
   trackingStart: number | null;

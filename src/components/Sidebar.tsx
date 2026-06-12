@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Todo, TodoList, ViewFilter } from '@/types/todo';
+import { computeStreak } from './DailyBadges';
 
 const LIST_COLORS = [
   '#6366f1','#f97316','#10b981','#f59e0b',
@@ -31,6 +32,9 @@ export default function Sidebar({
 
   const today = new Date().toISOString().split('T')[0];
 
+  const streak = computeStreak(todos);
+  const completedToday = todos.filter(t => t.completed && t.completedAt?.split('T')[0] === today).length;
+
   const smartViews = [
     { id: 'inbox',     label: '收件箱',   icon: '📥', count: todos.filter(t => !t.completed).length },
     { id: 'today',     label: '今天',     icon: '☀️', count: todos.filter(t => !t.completed && t.dueDate === today).length },
@@ -56,6 +60,24 @@ export default function Sidebar({
         <span className="font-bold text-[17px] tracking-tight bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
           TaskFlow
         </span>
+      </div>
+
+      {/* Daily streak banner */}
+      <div className="mx-3 mb-2 rounded-xl bg-white/5 ring-1 ring-white/10 px-3 py-2.5 flex items-center gap-3">
+        <div className="relative shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br from-orange-400/30 to-amber-500/20 flex items-center justify-center text-lg">
+          🔥
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-1">
+            <span className="text-lg font-black text-white leading-none tabular-nums">{streak}</span>
+            <span className="text-[11px] text-slate-400">天连续</span>
+          </div>
+          <div className="text-[10px] text-slate-500 mt-0.5">
+            {completedToday > 0
+              ? <>今天已完成 <span className="text-emerald-400 font-semibold">{completedToday}</span> 个</>
+              : streak > 0 ? '今天还没完成任务哦' : '完成一个任务点燃连胜'}
+          </div>
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 space-y-0.5 pb-2">
